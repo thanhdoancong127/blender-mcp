@@ -12,9 +12,12 @@ The point: an agent that can *look at* a 3D result can judge its quality instead
 |---|---|
 | `blender_scene_info` | Objects, counts and active camera of the open scene |
 | `blender_object_info(object_name)` | Transform, dimensions, materials, mesh stats |
-| `blender_run_python(code, timeout)` | Run Python in Blender (`bpy`); assign `result` to return a value |
+| `blender_run_python(code, timeout)` | Run Python in Blender (`bpy`). The reply is the code's **stdout**, so use `print()` |
 | `blender_screenshot(max_size)` | Screenshot of the 3D viewport, returned as an image (Blender UI must be open) |
-| `blender_turntable(views, size, engine, timeout)` | Render N evenly spaced views of all visible meshes, returned as images. View 0 = front (-Y). Scene render settings are restored afterwards |
+| `blender_turntable(views, size, engine, light, timeout)` | Render N evenly spaced views of all visible meshes, returned as images. View 0 = front (-Y). A temporary offset sun light follows the camera so faces are always lit; the scene is restored afterwards |
+| `blender_status` | Is the addon socket reachable? |
+| `blender_start(blend_file, timeout)` | Launch Blender (optionally opening a file) and wait until the addon socket answers. No-op if already up |
+| `blender_stop(force)` | Quit Blender. Refuses if the file has unsaved changes unless `force=True` (kills it) |
 
 ## Requirements
 
@@ -46,6 +49,7 @@ Register a stdio server whose command is
 |---|---|---|
 | `BLENDER_MCP_HOST` | `127.0.0.1` | Host running Blender |
 | `BLENDER_MCP_PORT` | `9876` | Addon socket port |
+| `BLENDER_EXE` | auto | Path to `blender.exe`; default is the newest install under `Program Files\Blender Foundation` |
 
 ### WSL note
 
@@ -67,7 +71,7 @@ uv run --group dev pytest
 
 Tests cover the socket protocol against a fake addon (partial replies, errors, timeouts) and
 check that the generated Blender snippets are valid Python. They do **not** run Blender;
-`blender_screenshot` and `blender_turntable` still need a manual run against a real Blender.
+`blender_start/stop`, `blender_screenshot` and `blender_turntable` were verified by hand against Blender 5.2 on Windows (the server itself was not run through an MCP client yet).
 
 ## License
 

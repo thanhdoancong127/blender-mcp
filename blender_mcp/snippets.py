@@ -1,7 +1,9 @@
 """Python source executed inside Blender (via the addon's execute_code)."""
 
-# Renders `n` evenly spaced turntable views of all visible mesh objects to `outdir`.
-# Result variable `result` is the list of written PNG paths (addon returns it).
+# Renders `n` evenly spaced turntable views of all visible mesh objects to `outdir` as
+# view_00.png .. view_NN.png. A temporary sun light follows the camera (offset key light) so the
+# faces toward the camera are always lit; it is removed afterwards with the camera.
+# (The addon's execute_code returns stdout, not a `result` variable.)
 TURNTABLE = r'''
 import bpy, math, os, mathutils
 outdir = {outdir!r}; n = {n}; size = {size}; engine = {engine!r}
@@ -18,6 +20,10 @@ old = (sc.camera, sc.render.engine, sc.render.resolution_x, sc.render.resolution
 cam_data = bpy.data.cameras.new("_tt_cam"); cam = bpy.data.objects.new("_tt_cam", cam_data)
 sc.collection.objects.link(cam); sc.camera = cam
 cam_data.lens = 50
+sun_data = bpy.data.lights.new("_tt_sun", "SUN"); sun_data.energy = {light}
+sun = bpy.data.objects.new("_tt_sun", sun_data); sc.collection.objects.link(sun)
+sun.parent = cam
+sun.rotation_euler = (math.radians(35), 0, math.radians(-30))  # offset from view axis so shading shows form
 dist = radius / math.sin(cam_data.angle / 2) * 1.15
 sc.render.engine = engine
 sc.render.resolution_x = sc.render.resolution_y = size
@@ -27,7 +33,7 @@ try:
     for i in range(n):
         a = 2 * math.pi * i / n
         # asset faces -Y (Blender front): i=0 is the front view
-        cam.location = center + mathutils.Vector((math.sin(a) * dist, -math.cos(a) * dist, radius * 0.15))
+        cam.location = center + mathutils.Vector((math.sin(a) * dist, -math.cos(a) * dist, radius * 0.4))
         direction = center - cam.location
         cam.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
         p = os.path.join(outdir, "view_%02d.png" % i)
@@ -35,9 +41,10 @@ try:
         bpy.ops.render.render(write_still=True)
         paths.append(p)
 finally:
-    sc.collection.objects.unlink(cam); bpy.data.objects.remove(cam)
-    bpy.data.cameras.remove(cam_data)
+    for o in (sun, cam):
+        sc.collection.objects.unlink(o); bpy.data.objects.remove(o)
+    bpy.data.cameras.remove(cam_data); bpy.data.lights.remove(sun_data)
     (sc.camera, sc.render.engine, sc.render.resolution_x, sc.render.resolution_y,
      sc.render.filepath, sc.render.image_settings.file_format) = old
-result = paths
+print(len(paths), 'views written')
 '''
