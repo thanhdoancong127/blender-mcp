@@ -103,7 +103,13 @@ print("@@JSON@@" + json.dumps(paths))
 IMPORT_GLB = r'''
 import bpy, json
 before = set(bpy.data.objects.keys())
-bpy.ops.import_scene.gltf(filepath=P["path"])
+ext = P["path"].lower().rsplit(".", 1)[-1]
+if ext in ("glb", "gltf"):
+    bpy.ops.import_scene.gltf(filepath=P["path"])
+elif ext == "fbx":
+    bpy.ops.import_scene.fbx(filepath=P["path"])
+else:
+    raise RuntimeError("unsupported model format: ." + ext)
 new = [bpy.data.objects[n] for n in bpy.data.objects.keys() if n not in before]
 tris = 0; pts = []
 import mathutils
@@ -318,4 +324,26 @@ finally:
     r.filepath = saved["fp"]; r.image_settings.file_format = saved["ff"]; r.image_settings.color_mode = saved["cm"]
     r.film_transparent = saved["ft"]; vl.material_override = saved["mo"]; sc.frame_set(saved["frame"])
 print("@@JSON@@" + json.dumps(paths))
+'''
+
+# Animation helpers. P (KEY_POSE): armature, frame, object(bool: also key the armature object's location/rotation).
+KEY_POSE = r'''
+import bpy, json
+a = bpy.data.objects[P["armature"]]; f = int(P["frame"])
+for pb in a.pose.bones:
+    pb.keyframe_insert("rotation_euler", frame=f); pb.keyframe_insert("location", frame=f)
+if P.get("object", True):
+    a.keyframe_insert("location", frame=f); a.keyframe_insert("rotation_euler", frame=f)
+print("@@JSON@@" + json.dumps({"keyed": f, "bones": len(a.pose.bones)}))
+'''
+
+# P: start, end, fps (omit a key to leave it), frame (go to this frame; evaluates existing animation).
+TIMELINE = r'''
+import bpy, json
+sc = bpy.context.scene
+if "start" in P: sc.frame_start = int(P["start"])
+if "end" in P: sc.frame_end = int(P["end"])
+if "fps" in P: sc.render.fps = int(P["fps"])
+if "frame" in P: sc.frame_set(int(P["frame"]))
+print("@@JSON@@" + json.dumps({"start": sc.frame_start, "end": sc.frame_end, "fps": sc.render.fps, "frame": sc.frame_current}))
 '''

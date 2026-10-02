@@ -172,3 +172,9 @@ def test_render_scene_validation_and_snippet():
         ops.render_scene(mode="bogus")
     with pytest.raises(ValueError):
         ops.render_scene(mode="mask")
+
+
+def test_animation_snippets_compile():
+    import ast
+    from blender_mcp import snippets
+    ast.parse(snippets.KEY_POSE); ast.parse(snippets.TIMELINE)

@@ -102,6 +102,17 @@ def aim_pose(armature, aim, reset=True, timeout=60.0):
     return _run(snippets.AIM_POSE, {"armature": armature, "aim": aim, "reset": reset}, timeout)
 
 
+def key_pose(armature, frame, with_object=True, timeout=60.0):
+    """Insert keyframes for the current pose of every bone (and, by default, the armature object's transform)."""
+    return _run(snippets.KEY_POSE, {"armature": armature, "frame": frame, "object": with_object}, timeout)
+
+
+def timeline(start=None, end=None, fps=None, frame=None, timeout=30.0):
+    """Set the scene frame range / fps and/or jump to a frame (which evaluates existing animation)."""
+    p = {k: v for k, v in (("start", start), ("end", end), ("fps", fps), ("frame", frame)) if v is not None}
+    return _run(snippets.TIMELINE, p, timeout)
+
+
 def reset_pose(armature, timeout=60.0):
     return set_pose(armature, {}, True, timeout)
 

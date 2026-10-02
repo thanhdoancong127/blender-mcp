@@ -119,7 +119,7 @@ def blender_render_scene(width: int = 640, height: int = 640, mode: str = "beaut
 
 @mcp.tool()
 def blender_import_glb(path: str) -> dict:
-    """Import a GLB/glTF into the open scene. Returns new objects, triangle count and dimensions (x,y,z in m)."""
+    """Import a GLB/glTF/FBX into the open scene. Returns new objects, triangle count and dimensions (x,y,z in m)."""
     return ops.import_glb(path)
 
 
@@ -176,6 +176,20 @@ def blender_pose_aim(armature: str, aim: dict, reset: bool = True) -> dict:
     points each bone's limb (its head to the head of its continuing child, not the bone tail) along that WORLD direction, parents first. Returns the residual angle per
     bone in degrees. Prefer this over blender_set_pose for authoring poses."""
     return ops.aim_pose(armature, aim, reset)
+
+
+@mcp.tool()
+def blender_key_pose(armature: str, frame: int, with_object: bool = True) -> dict:
+    """Keyframe the current pose of the armature at `frame` (all bones, plus the object's location/rotation).
+    Workflow for a clip: blender_timeline(frame=f) -> blender_pose_aim(...) -> blender_key_pose(frame=f), repeat."""
+    return ops.key_pose(armature, frame, with_object)
+
+
+@mcp.tool()
+def blender_timeline(start: int | None = None, end: int | None = None, fps: int | None = None,
+                     frame: int | None = None) -> dict:
+    """Set the frame range / fps and/or jump to a frame (which evaluates existing keyframes)."""
+    return ops.timeline(start, end, fps, frame)
 
 
 @mcp.tool()

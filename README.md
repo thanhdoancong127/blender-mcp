@@ -40,7 +40,7 @@ The point: an agent that can *look at* a 3D result can judge its quality instead
 
 | Tool | What it does |
 |---|---|
-| `blender_import_glb(path)` | Import GLB/glTF; returns new objects, triangle count, dimensions (m) |
+| `blender_import_glb(path)` | Import GLB/glTF/**FBX**; returns new objects, triangle count, dimensions (m) |
 | `blender_export_glb(path, objects)` | Export the scene or the listed objects |
 | `blender_open(path)`, `blender_save(path)`, `blender_new_scene(keep)` | Open / save a .blend, clear the scene |
 | `blender_validate_asset(glb_path, height_m, tri_budget, ...)` | Run an external asset validator (see below) |
@@ -51,6 +51,7 @@ The point: an agent that can *look at* a 3D result can judge its quality instead
 |---|---|
 | `blender_rig_info(armature)` | Bones (parent, head/tail) and bound meshes |
 | `blender_pose_aim(armature, aim)` | **Pose by world direction** (`{"RightArm": [1, 0, 0.2]}`): each bone's *limb* (its head to its child's head, not its tail) points that way. Returns residual degrees per bone. Preferred way to author poses |
+| `blender_key_pose(armature, frame)`, `blender_timeline(start, end, fps, frame)` | Animation: jump to a frame, aim a pose, key it; repeat for each key, then render with `blender_render_scene(frames=[...])` |
 | `blender_set_pose(armature, rotations)`, `blender_reset_pose` | Local Euler rotations in degrees per bone (needs bone-axis knowledge) |
 | `blender_pose_metrics(armature, mesh)` | Deformation of the current pose vs rest: face-area ratio percentiles, fraction stretched >2x / squashed <0.4x, volume ratio, zero-weight vertices |
 | `blender_rom_test(armature, mesh, poses, ...)` | For each pose: apply, measure, render; JSON report + one image per pose; rig reset afterwards. The built-in Mixamo pose table has **uncalibrated axes**: check the images or pass your own `poses` |
