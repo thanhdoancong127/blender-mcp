@@ -51,3 +51,20 @@ def call(cmd_type, params=None, host=None, port=None, timeout=30.0):
     if resp.get("status") != "success":
         raise BlenderError(resp.get("message") or str(resp))
     return resp.get("result")
+
+
+MARK = "@@JSON@@"
+
+
+def run_json(body, params=None, timeout=60.0):
+    """Run a snippet body in Blender with params injected as `P`; return the JSON it printed.
+
+    The addon returns the code's stdout, so snippets print one `@@JSON@@<json>` line.
+    """
+    code = "import json as _j\nP = _j.loads(%s)\n%s" % (json.dumps(json.dumps(params or {})), body)
+    out = call("execute_code", {"code": code}, timeout=timeout)
+    text = out.get("result", "") if isinstance(out, dict) else str(out)
+    for line in reversed(str(text).splitlines()):
+        if line.startswith(MARK):
+            return json.loads(line[len(MARK):])
+    raise BlenderError("Blender code produced no result; stdout tail: " + str(text)[-300:])

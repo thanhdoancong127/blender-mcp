@@ -6,7 +6,7 @@ import threading
 import pytest
 
 from blender_mcp import client
-from blender_mcp.snippets import TURNTABLE
+from blender_mcp import snippets
 
 
 def fake_addon(reply: bytes, chunks=1):
@@ -58,8 +58,10 @@ def test_unreachable_raises_oserror():
         client.call("t", port=1)
 
 
-def test_turntable_snippet_is_valid_python():
-    ast.parse(TURNTABLE.format(outdir="/tmp/x", n=4, size=256, engine="BLENDER_EEVEE", light=3.0))
+def test_snippets_are_valid_python():
+    for name in dir(snippets):
+        if name.isupper():
+            ast.parse(getattr(snippets, name))
 
 
 # ---- launcher -------------------------------------------------------------

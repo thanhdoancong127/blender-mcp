@@ -6,7 +6,13 @@ requires-python = ">=3.10"
 license = { text = "MIT" }
 dependencies = [
     "mcp[cli]>=1.2,<2",
+    "numpy>=1.26",
+    "pillow>=10",
 ]
+
+[project.optional-dependencies]
+# deps of an external asset validator (see ASSET_VALIDATOR_PY in the README)
+validate = ["trimesh>=4,<5", "pygltflib>=1,<2"]
 
 [dependency-groups]
 dev = ["pytest>=8"]
