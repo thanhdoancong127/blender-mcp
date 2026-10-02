@@ -1,0 +1,19 @@
+[project]
+name = "blender-mcp"
+version = "0.1.0"
+description = "MCP server that lets agents see and drive a running Blender (screenshot, turntable, run Python)"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "mcp[cli]>=1.2,<2",
+]
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
