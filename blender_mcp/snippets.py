@@ -19,6 +19,8 @@ for o in meshes:
     pts += [eo.matrix_world @ mathutils.Vector(c) for c in eo.bound_box]
 lo = mathutils.Vector(map(min, zip(*pts))); hi = mathutils.Vector(map(max, zip(*pts)))
 center = (lo + hi) / 2; radius = max((hi - lo).length / 2, 1e-3)
+if P.get("focus"):  # zoom on a region (e.g. the head of a full-body character), world coordinates
+    center = mathutils.Vector(P["focus"]["center"]); radius = max(float(P["focus"]["radius"]), 1e-3)
 mode = P["mode"]
 # wireframe needs Cycles (the Wireframe node does not work in EEVEE); CPU keeps the GPU free for ComfyUI
 engine = "BLENDER_WORKBENCH" if mode == "solid" else ("CYCLES" if mode == "wireframe" else P["engine"])

@@ -17,9 +17,11 @@ def _run(body, params, timeout):
 
 
 def render(views, size=512, engine="BLENDER_EEVEE", light=3.0, mode="material", ortho=False,
-           objects=None, outdir=None, prefix="view_", timeout=300.0, ignore_gpu_guard=False):
+           objects=None, outdir=None, prefix="view_", timeout=300.0, ignore_gpu_guard=False,
+           focus=None):
     """Render each {az, el} view (degrees; az=0 is front/-Y). mode: material|solid|wireframe|normal|mask.
 
+    focus={"center": [x, y, z], "radius": r} frames that world-space region instead of the whole object.
     Returns the list of PNG paths. `normal` is world-space (rgb = n*0.5+0.5); `mask` is RGBA with the
     silhouette in alpha.
     """
@@ -33,7 +35,7 @@ def render(views, size=512, engine="BLENDER_EEVEE", light=3.0, mode="material", 
     gpu.check("BLENDER_WORKBENCH" if mode in ("solid", "wireframe") else engine, ignore_gpu_guard)
     outdir = to_native(outdir) if outdir else tempfile.mkdtemp(prefix="blender_mcp_")
     params = dict(outdir=outdir, views=views, size=size, engine=engine, light=light, mode=mode,
-                  ortho=ortho, objects=objects or [], prefix=prefix)
+                  ortho=ortho, objects=objects or [], prefix=prefix, focus=focus)
     paths = _run(snippets.RENDER, params, timeout)
     missing = [p for p in paths if not Path(p).exists()]
     if missing:

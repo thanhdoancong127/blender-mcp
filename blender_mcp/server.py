@@ -92,13 +92,14 @@ def blender_turntable(views: int = 4, size: int = 512, elevation: float = 20.0, 
 @mcp.tool()
 def blender_render(views: list[dict], size: int = 512, mode: str = "material", ortho: bool = False,
                    objects: list[str] | None = None, engine: str = "BLENDER_EEVEE", light: float = 3.0,
-                   ignore_gpu_guard: bool = False, timeout: float = 300.0):
+                   focus: dict | None = None, ignore_gpu_guard: bool = False, timeout: float = 300.0):
     """Render explicit camera views: views=[{"az": degrees, "el": degrees}, ...] (az 0 = front/-Y, +az toward +X,
     el = elevation). `objects` limits the framed/rendered meshes; ortho=True gives an orthographic camera.
+    focus={"center": [x, y, z], "radius": r} frames that world-space region (e.g. the head of a full body).
     Modes as in blender_turntable. Returns the images.
     """
     paths = ops.render(views, size=size, engine=engine, light=light, mode=mode, ortho=ortho, objects=objects,
-                       ignore_gpu_guard=ignore_gpu_guard, timeout=timeout)
+                       focus=focus, ignore_gpu_guard=ignore_gpu_guard, timeout=timeout)
     return [_img(p) for p in paths]
 
 
