@@ -103,6 +103,18 @@ def blender_render(views: list[dict], size: int = 512, mode: str = "material", o
     return [_img(p) for p in paths]
 
 
+@mcp.tool()
+def blender_render_scene(width: int = 640, height: int = 640, mode: str = "beauty", frames: list[int] | None = None,
+                         objects: list[str] | None = None, hide: list[str] | None = None,
+                         engine: str = "BLENDER_EEVEE", ignore_gpu_guard: bool = False, timeout: float = 300.0):
+    """Render through the scene's OWN active camera and lights (shot rendering), one image per frame.
+    mode: beauty | mask (needs `objects`: only they are drawn, white, silhouette in alpha) | normal.
+    `hide` hides objects for this render (e.g. actors -> clean background plate). Returns the images."""
+    paths = ops.render_scene((width, height), mode, frames or [1], objects, hide, engine,
+                             ignore_gpu_guard=ignore_gpu_guard, timeout=timeout)
+    return [_img(p) for p in paths]
+
+
 # ---- files / assets ------------------------------------------------------------------------------------
 
 @mcp.tool()
@@ -156,6 +168,14 @@ def blender_set_pose(armature: str, rotations: dict, reset: bool = True) -> dict
     """Set local Euler rotations (degrees) on pose bones: rotations={"bone": [x, y, z]}. reset=True clears
     other bones first. Use blender_reset_pose afterwards to go back to rest."""
     return ops.set_pose(armature, rotations, reset)
+
+
+@mcp.tool()
+def blender_pose_aim(armature: str, aim: dict, reset: bool = True) -> dict:
+    """Pose by direction, no bone-axis knowledge needed: aim={"RightArm": [1, 0, 0.2], "Spine": [0, 0, 1]}
+    points each bone's limb (its head to the head of its continuing child, not the bone tail) along that WORLD direction, parents first. Returns the residual angle per
+    bone in degrees. Prefer this over blender_set_pose for authoring poses."""
+    return ops.aim_pose(armature, aim, reset)
 
 
 @mcp.tool()

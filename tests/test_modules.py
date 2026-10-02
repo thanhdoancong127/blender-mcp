@@ -156,3 +156,19 @@ def test_validate_wraps_valueerror(monkeypatch, tmp_path):
     f.write_text("def validate(p, h, t, tol=0.02, nonmanifold_max=0):\n    raise ValueError('dims bad')\n")
     monkeypatch.setenv("ASSET_VALIDATOR_PY", str(f))
     assert validate.validate("x.glb", 1.0, 100) == {"ok": False, "error": "dims bad"}
+
+
+def test_aim_pose_snippet_compiles_and_registered():
+    import ast
+    from blender_mcp import snippets
+    ast.parse(snippets.AIM_POSE)
+
+
+def test_render_scene_validation_and_snippet():
+    import ast
+    from blender_mcp import snippets
+    ast.parse(snippets.RENDER_SCENE)
+    with pytest.raises(ValueError):
+        ops.render_scene(mode="bogus")
+    with pytest.raises(ValueError):
+        ops.render_scene(mode="mask")

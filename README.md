@@ -29,7 +29,8 @@ The point: an agent that can *look at* a 3D result can judge its quality instead
 | Tool | What it does |
 |---|---|
 | `blender_turntable(views, size, elevation, mode, ...)` | Evenly spaced views of all visible meshes. View 0 = front (-Y) |
-| `blender_render(views=[{az, el}], size, mode, ortho, objects, ...)` | Explicit camera views (az 0 = front, +az toward +X; el = elevation) |
+| `blender_render(views=[{az, el}], size, mode, ortho, objects, focus, ...)` | Explicit camera views (az 0 = front, +az toward +X; el = elevation); `focus` frames a world-space region |
+| `blender_render_scene(width, height, mode, frames, objects, hide, ...)` | Render through the scene's **own camera and lights** (shot rendering): `beauty`, per-object `mask`, `normal`; `hide` actors for a clean plate |
 
 `mode`: `material` (scene materials + temporary offset key light), `solid` (Workbench, fast), `wireframe`
 (Cycles on CPU; needs enough pixels per polygon to show lines), `normal` (world-space, rgb = n*0.5+0.5),
@@ -49,7 +50,8 @@ The point: an agent that can *look at* a 3D result can judge its quality instead
 | Tool | What it does |
 |---|---|
 | `blender_rig_info(armature)` | Bones (parent, head/tail) and bound meshes |
-| `blender_set_pose(armature, rotations)`, `blender_reset_pose` | Local Euler rotations in degrees per bone |
+| `blender_pose_aim(armature, aim)` | **Pose by world direction** (`{"RightArm": [1, 0, 0.2]}`): each bone's *limb* (its head to its child's head, not its tail) points that way. Returns residual degrees per bone. Preferred way to author poses |
+| `blender_set_pose(armature, rotations)`, `blender_reset_pose` | Local Euler rotations in degrees per bone (needs bone-axis knowledge) |
 | `blender_pose_metrics(armature, mesh)` | Deformation of the current pose vs rest: face-area ratio percentiles, fraction stretched >2x / squashed <0.4x, volume ratio, zero-weight vertices |
 | `blender_rom_test(armature, mesh, poses, ...)` | For each pose: apply, measure, render; JSON report + one image per pose; rig reset afterwards. The built-in Mixamo pose table has **uncalibrated axes**: check the images or pass your own `poses` |
 

@@ -220,3 +220,102 @@ out = {"faces": int(len(ra)), "area_ratio_p01": float(np.percentile(ratio, 1)), 
        "zero_weight_vertices": zero_w}
 print("@@JSON@@" + json.dumps(out))
 '''
+
+# Aim bones along WORLD-space directions (no knowledge of bone axes needed). P: armature, aim{bone:[dx,dy,dz]}, reset(bool).
+# Bones are processed parent-first; each is rotated about its head so its LIMB direction (head -> child head) points at the target.
+AIM_POSE = r'''
+import bpy, json, mathutils
+a = bpy.data.objects[P["armature"]]
+if P.get("reset", True):
+    for pb in a.pose.bones:
+        pb.rotation_mode = "XYZ"; pb.rotation_euler = (0, 0, 0); pb.location = (0, 0, 0); pb.scale = (1, 1, 1)
+bpy.context.view_layer.update()
+missing = [b for b in P["aim"] if b not in a.pose.bones]
+if missing:
+    raise RuntimeError("unknown bones: %s" % missing)
+depth = {}
+for b in a.data.bones:
+    d = 0; c = b
+    while c.parent:
+        c = c.parent; d += 1
+    depth[b.name] = d
+errs = {}; refs = {}
+for name in sorted(P["aim"], key=lambda n: depth[n]):
+    pb = a.pose.bones[name]; mw = a.matrix_world
+    head = mw @ pb.head; tail = mw @ pb.tail
+    # Limb direction = head -> head of the child that best continues the bone; leaf bones use head -> tail.
+    # (Bone tails are NOT reliable limb directions: e.g. a rig's UpLeg bone can point sideways.)
+    ref = None
+    if pb.children:
+        own = (tail - head).normalized(); best = 9.0
+        for k in pb.children:
+            ang = ((mw @ k.head) - head).normalized().angle(own)
+            if ang < best:
+                best = ang; ref = k
+    refs[name] = ref.name if ref else "(tail)"
+    end = (mw @ ref.head) if ref else tail
+    cur = (end - head).normalized(); tgt = mathutils.Vector(P["aim"][name]).normalized()
+    R = cur.rotation_difference(tgt).to_matrix().to_4x4()
+    M = mw @ pb.matrix
+    pb.matrix = mw.inverted() @ (mathutils.Matrix.Translation(head) @ R @ mathutils.Matrix.Translation(-head) @ M)
+    bpy.context.view_layer.update()
+    h2 = a.matrix_world @ pb.head
+    e2 = (a.matrix_world @ ref.head) if ref else (a.matrix_world @ pb.tail)
+    errs[name] = round(float((e2 - h2).normalized().angle(tgt)) * 57.29578, 2)
+print("@@JSON@@" + json.dumps({"aimed": list(P["aim"]), "residual_deg": errs, "limb_ref": refs}))
+'''
+
+# Render the scene through its OWN camera and lights (shot rendering), at the given frames.
+# P: outdir, prefix, size [w, h], mode (beauty|mask|normal), engine, frames[int], objects[] (mask: only these are white,
+# everything else hidden), hide[] (objects hidden for this render, e.g. actors for a clean plate).
+RENDER_SCENE = r'''
+import bpy, os, json
+sc = bpy.context.scene; vl = bpy.context.view_layer; r = sc.render
+if sc.camera is None:
+    raise RuntimeError("scene has no active camera")
+os.makedirs(P["outdir"], exist_ok=True)
+mode = P["mode"]
+saved = dict(engine=r.engine, rx=r.resolution_x, ry=r.resolution_y, pct=r.resolution_percentage, fp=r.filepath,
+             ff=r.image_settings.file_format, cm=r.image_settings.color_mode, ft=r.film_transparent,
+             mo=vl.material_override, frame=sc.frame_current)
+hid = {}
+for n in P.get("hide", []):
+    o = bpy.data.objects[n]; hid[n] = o.hide_render; o.hide_render = True
+override = None
+if mode in ("mask", "normal"):
+    if mode == "mask":
+        keep = set(P["objects"])
+        for o in sc.objects:
+            if o.type in ("MESH", "LIGHT") and o.name not in keep and o.name not in hid:
+                hid[o.name] = o.hide_render; o.hide_render = True
+    override = bpy.data.materials.new("_mcp_override"); override.use_nodes = True
+    nt = override.node_tree; nt.nodes.clear()
+    out = nt.nodes.new("ShaderNodeOutputMaterial"); em = nt.nodes.new("ShaderNodeEmission")
+    if mode == "mask":
+        em.inputs["Color"].default_value = (1, 1, 1, 1); nt.links.new(em.outputs[0], out.inputs[0])
+        r.film_transparent = True; r.image_settings.color_mode = "RGBA"
+    else:
+        g = nt.nodes.new("ShaderNodeNewGeometry"); m = nt.nodes.new("ShaderNodeVectorMath"); m.operation = "MULTIPLY_ADD"
+        m.inputs[1].default_value = (0.5, 0.5, 0.5); m.inputs[2].default_value = (0.5, 0.5, 0.5)
+        nt.links.new(g.outputs["Normal"], m.inputs[0]); nt.links.new(m.outputs[0], em.inputs["Color"])
+        nt.links.new(em.outputs[0], out.inputs[0])
+    vl.material_override = override
+r.engine = P["engine"]; r.resolution_x, r.resolution_y = P["size"]; r.resolution_percentage = 100
+r.image_settings.file_format = "PNG"
+paths = []
+try:
+    for f in P["frames"]:
+        sc.frame_set(int(f))
+        p = os.path.join(P["outdir"], "%s%04d.png" % (P["prefix"], int(f)))
+        r.filepath = p
+        bpy.ops.render.render(write_still=True)
+        paths.append(p)
+finally:
+    for n, v in hid.items():
+        bpy.data.objects[n].hide_render = v
+    if override: bpy.data.materials.remove(override)
+    r.engine = saved["engine"]; r.resolution_x = saved["rx"]; r.resolution_y = saved["ry"]; r.resolution_percentage = saved["pct"]
+    r.filepath = saved["fp"]; r.image_settings.file_format = saved["ff"]; r.image_settings.color_mode = saved["cm"]
+    r.film_transparent = saved["ft"]; vl.material_override = saved["mo"]; sc.frame_set(saved["frame"])
+print("@@JSON@@" + json.dumps(paths))
+'''

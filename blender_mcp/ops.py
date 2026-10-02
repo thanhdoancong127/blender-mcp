@@ -43,6 +43,24 @@ def render(views, size=512, engine="BLENDER_EEVEE", light=3.0, mode="material", 
     return paths
 
 
+def render_scene(size=(640, 640), mode="beauty", frames=(1,), objects=None, hide=None, engine="BLENDER_EEVEE",
+                 outdir=None, prefix="shot_", timeout=300.0, ignore_gpu_guard=False):
+    """Render through the scene's own camera/lights (shot rendering). mode: beauty|mask|normal.
+    mask needs `objects` (only they are drawn, white, alpha silhouette); `hide` hides objects (e.g. actors -> clean plate)."""
+    if mode not in ("beauty", "mask", "normal"):
+        raise ValueError("mode must be beauty|mask|normal")
+    if mode == "mask" and not objects:
+        raise ValueError("mask mode needs objects")
+    gpu.check(engine, ignore_gpu_guard)
+    outdir = to_native(outdir) if outdir else tempfile.mkdtemp(prefix="blender_mcp_scene_")
+    paths = _run(snippets.RENDER_SCENE, dict(outdir=outdir, prefix=prefix, size=list(size), mode=mode, engine=engine,
+                                              frames=list(frames), objects=objects or [], hide=hide or []), timeout)
+    missing = [p for p in paths if not Path(p).exists()]
+    if missing:
+        raise RuntimeError(f"render did not write: {missing}")
+    return paths
+
+
 def turntable(n=4, elevation=20.0, **kw):
     if not 1 <= n <= 16:
         raise ValueError("views must be 1..16")
@@ -76,6 +94,12 @@ def rig_info(armature, timeout=60.0):
 
 def set_pose(armature, rotations, reset=True, timeout=60.0):
     return _run(snippets.SET_POSE, {"armature": armature, "rotations": rotations, "reset": reset}, timeout)
+
+
+def aim_pose(armature, aim, reset=True, timeout=60.0):
+    """Point bones along world-space directions: aim={"RightArm": [1, 0, 0.2], ...}. Returns the residual
+    angle (degrees) per bone: large residuals mean the target was unreachable (e.g. a parent constrains it)."""
+    return _run(snippets.AIM_POSE, {"armature": armature, "aim": aim, "reset": reset}, timeout)
 
 
 def reset_pose(armature, timeout=60.0):
